@@ -445,7 +445,7 @@ log_success "rsyslog UDP/TCP listeners enabled."
 
 FIREWALL_RSYSLOG="/etc/rsyslog.d/firewall.conf"
 
-cat <<EOF > "$FIREWALL_RSYSLOG"
+cat << 'EOF' > "$FIREWALL_RSYSLOG"
 if $fromhost-ip == '172.16.102.254' then /var/log/firewall.log
 & stop
 
