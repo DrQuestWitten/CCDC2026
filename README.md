@@ -91,13 +91,13 @@ Mehdi Mirnajafi - Network Lead
 
 Michael Abood - Tech Lead / Networking
 
-Keegan Miller - Splunk
+Keegan Miller - Oracle Splunk
 
-Abdul Shakib - 
+Abdul Shakib - Server 22 FTP
 
-Adam Mayberry - 
+Adam Mayberry - Server 19 Web
 
-Drabir Sen -
+Drabir Sen - Windows 11 Workstation
 
 ## Advisors - 2026
 Professor Doug Witten
