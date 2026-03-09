@@ -83,13 +83,13 @@ Do **not use these tools on systems without permission**.
 ---
 
 ## Team Members - 2026
-Hussein Abdullah - Team Lead
+Hussein Abdullah - Team Captain / Linux Lead
 
 Christopher Seman - Windows Lead
 
 Mehdi Mirnajafi - Network Lead
 
-Michael Abood - Tech Lead
+Michael Abood - Tech Lead / Networking
 
 Keegan Miller - Splunk
 
