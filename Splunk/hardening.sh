@@ -972,26 +972,26 @@ fi
 # ==============================================================================
 # 19. Audit Log Integrity & Forwarding
 # ==============================================================================
-log_info "--- Section 19: Audit Log Protection ---"
+# log_info "--- Section 19: Audit Log Protection ---"
 
-# # 19.1 Enable auditd immutability to prevent tampering
-# log_info "Enforcing auditd immutable flags..."
-# if [[ -f /etc/audit/rules.d/99-wazuh.rules ]]; then
-#     if ! grep -q "\-e 2" /etc/audit/rules.d/99-wazuh.rules; then
-#         echo "-e 2" >> /etc/audit/rules.d/99-wazuh.rules
-#         auditctl -R /etc/audit/rules.d/99-wazuh.rules >/dev/null 2>&1 || true
-#         log_fixed "Enabled immutable audit daemon flag (-e 2)."
-#     fi
-# fi
+# # # 19.1 Enable auditd immutability to prevent tampering
+# # log_info "Enforcing auditd immutable flags..."
+# # if [[ -f /etc/audit/rules.d/99-wazuh.rules ]]; then
+# #     if ! grep -q "\-e 2" /etc/audit/rules.d/99-wazuh.rules; then
+# #         echo "-e 2" >> /etc/audit/rules.d/99-wazuh.rules
+# #         auditctl -R /etc/audit/rules.d/99-wazuh.rules >/dev/null 2>&1 || true
+# #         log_fixed "Enabled immutable audit daemon flag (-e 2)."
+# #     fi
+# # fi
 
-# # 19.2 Configure rsyslog forwarding to prevent log deletion
-# if [[ -f /etc/rsyslog.conf ]]; then
-#     if ! grep -q "\$ActionFileEnableSync" /etc/rsyslog.conf; then
-#         echo "\$ActionFileEnableSync on" >> /etc/rsyslog.conf
-#         systemctl restart rsyslog >/dev/null 2>&1 || true
-#         log_fixed "Enabled rsyslog sync mode (immediate disk write)."
-#     fi
-# fi
+# # # 19.2 Configure rsyslog forwarding to prevent log deletion
+# # if [[ -f /etc/rsyslog.conf ]]; then
+# #     if ! grep -q "\$ActionFileEnableSync" /etc/rsyslog.conf; then
+# #         echo "\$ActionFileEnableSync on" >> /etc/rsyslog.conf
+# #         systemctl restart rsyslog >/dev/null 2>&1 || true
+# #         log_fixed "Enabled rsyslog sync mode (immediate disk write)."
+# #     fi
+# # fi
 
 log_info "=============================================================================="
 log_info "Audit & Hardening Complete. Check $AUDIT_REPORT for full details."
