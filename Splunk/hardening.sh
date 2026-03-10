@@ -133,10 +133,12 @@ fi
 # ==============================================================================
 log_info "--- Section 4: Surface Reduction ---"
 
-SERVICES_TO_REMOVE=("avahi-daemon" "cups" "fwupd-refresh.timer" "rpcbind"
+SERVICES_TO_REMOVE=("avahi-daemon" "cups" "fwupd-refresh.timer" "rpcbind" "bluetooth"
                     "sysstat-collect.timer" "sysstat-summary.timer" "ipc_broker"
                     "identity" "postgres" "rpc.idmapd" "rpc.statd" "dnf-automatic.timer"
-                    "abrtd" "abrt-ccpp" "abrt-oops" "kdump" "cups-browsed" "chronyd" "pcscd")
+                    "abrtd" "abrt-ccpp" "abrt-oops" "kdump" "cups-browsed" "chronyd" "pcscd"
+                    "ModemManager" "NetworkManager-wait-online" "geoclue" "vsftpd" "telnet"
+                    "tftp" "nfs-server" "smb" "snmpd")
 
 for svc in "${SERVICES_TO_REMOVE[@]}"; do
     if systemctl list-unit-files --type=service --no-pager 2>/dev/null | grep -q "^${svc}\.service" || pkg_is_installed "$svc"; then
