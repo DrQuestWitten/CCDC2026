@@ -1,0 +1,69 @@
+<group name="fortress_defense,">
+
+  <rule id="150001" level="15">
+    <if_group>syslog</if_group>
+    <regex type="pcre2">(bash|sh|zsh).*(-i|&gt;&amp;|0&gt;&amp;1|1&gt;&amp;2|/dev/(tcp|udp)/)|nc\s+.*(-e|-c)\s+|python\s+-c\s+.*socket|perl\s+-e\s+.*socket|socat\s+.*tcp</regex>
+    <description>CRITICAL: Reverse shell behavior detected.</description>
+  </rule>
+
+  <rule id="150002" level="15">
+    <if_group>syslog</if_group>
+    <regex type="pcre2">(www-data|apache|nginx|httpd).*(/bin/(sh|bash)|nc\s|curl\s|wget\s|python\s+-c)</regex>
+    <description>CRITICAL: Web service account spawning shell or network tool.</description>
+  </rule>
+
+  <rule id="150003" level="14">
+    <if_group>syslog</if_group>
+    <regex type="pcre2">(www-data|apache|nginx|httpd).*(whoami|id|uname\s+-a|cat\s+/etc/passwd|cat\s+/etc/shadow|ls\s+-la\s+/root)</regex>
+    <description>HIGH: Web service performing system discovery.</description>
+  </rule>
+
+  <rule id="150004" level="15">
+    <if_group>syslog</if_group>
+    <regex type="pcre2">(systemctl|service|kill|killall|pkill).*(wazuh|auditd|rsyslog|splunk)</regex>
+    <description>CRITICAL: Attempt to disable monitoring/logging service.</description>
+  </rule>
+
+  <rule id="150005" level="15">
+    <if_group>syslog</if_group>
+    <regex type="pcre2">useradd -o -u 0|usermod -o -u 0</regex>
+    <description>CRITICAL: Creation of secondary UID 0 account.</description>
+  </rule>
+
+  <rule id="150006" level="14">
+    <if_group>syscheck</if_group>
+    <field name="file" type="pcre2">/etc/sudoers|/etc/sudoers.d/</field>
+    <description>HIGH: Sudoers file modified.</description>
+  </rule>
+
+  <rule id="150007" level="14">
+    <if_group>syscheck</if_group>
+    <field name="file">authorized_keys</field>
+    <description>HIGH: SSH authorized_keys modified (possible persistence).</description>
+  </rule>
+
+  <rule id="150008" level="14">
+    <if_group>syscheck</if_group>
+    <field name="file" type="pcre2">/etc/cron|/var/spool/cron</field>
+    <description>HIGH: Cron configuration modified (possible persistence).</description>
+  </rule>
+
+  <rule id="150009" level="14">
+    <if_sid>500</if_sid>
+    <regex type="pcre2">base64\s+-d\s+.*\|\s*(bash|sh)</regex>
+    <description>HIGH: Base64 decoded payload piped to shell.</description>
+  </rule>
+
+  <rule id="150010" level="14">
+    <if_group>syscheck</if_group>
+    <field name="file" type="pcre2">/var/spool/mail/|/etc/postfix/|/etc/dovecot/</field>
+    <description>HIGH: Direct tampering with Mail Spools or Dovecot/Postfix config.</description>
+  </rule>
+
+  <rule id="150011" level="13">
+    <if_group>syslog</if_group>
+    <regex type="pcre2">(dovecot|postfix).*(auth-worker.*root|failed.*password.*root)</regex>
+    <description>HIGH: Brute force or Privilege Escalation attempt on Mail Auth.</description>
+  </rule>
+
+</group>
