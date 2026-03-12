@@ -10,7 +10,7 @@
 
 
 
-Write-Host "Starting Phase 3 Domain Controller Hardening..."
+Write-Host "Starting Phase 3 Domain Controller Hardening..." -ForegroundColor Cyan
 
 
 
@@ -22,11 +22,11 @@ Write-Host "Starting Phase 3 Domain Controller Hardening..."
 
 # ------------------------------------------------
 
-Write-Host "Enforcing LDAP Signing..."
+Write-Host "Enforcing LDAP Signing..." -ForegroundColor Yellow
 
 
 
-New-ItemProperty `
+Set-ItemProperty `
 
  -Path "HKLM:\SYSTEM\CurrentControlSet\Services\NTDS\Parameters" `
 
@@ -34,9 +34,7 @@ New-ItemProperty `
 
  -Value 2 `
 
- -PropertyType DWORD -Force
-
-
+ -Type DWord
 
 
 
@@ -46,11 +44,11 @@ New-ItemProperty `
 
 # ------------------------------------------------
 
-Write-Host "Disabling Anonymous Enumeration..."
+Write-Host "Disabling Anonymous Enumeration..." -ForegroundColor Yellow
 
 
 
-New-ItemProperty `
+Set-ItemProperty `
 
  -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Lsa" `
 
@@ -58,11 +56,11 @@ New-ItemProperty `
 
  -Value 1 `
 
- -PropertyType DWORD -Force
+ -Type DWord
 
 
 
-New-ItemProperty `
+Set-ItemProperty `
 
  -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Lsa" `
 
@@ -70,9 +68,7 @@ New-ItemProperty `
 
  -Value 1 `
 
- -PropertyType DWORD -Force
-
-
+ -Type DWord
 
 
 
@@ -80,15 +76,15 @@ New-ItemProperty `
 
 # 4. Protect LSASS
 
-# Prevent credential dumping (Mimikatz)
+# Prevent credential dumping
 
 # ------------------------------------------------
 
-Write-Host "Enabling LSASS Protection..."
+Write-Host "Enabling LSASS Protection..." -ForegroundColor Yellow
 
 
 
-New-ItemProperty `
+Set-ItemProperty `
 
  -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Lsa" `
 
@@ -96,9 +92,7 @@ New-ItemProperty `
 
  -Value 1 `
 
- -PropertyType DWORD -Force
-
-
+ -Type DWord
 
 
 
@@ -108,7 +102,7 @@ New-ItemProperty `
 
 # ------------------------------------------------
 
-Write-Host "Enabling Security Auditing..."
+Write-Host "Enabling Security Auditing..." -ForegroundColor Yellow
 
 
 
@@ -124,43 +118,57 @@ auditpol /set /category:"Directory Service Access" /success:enable /failure:enab
 
 
 
-
-
 # ------------------------------------------------
 
 # 6. Protect Domain Admins Group
 
 # ------------------------------------------------
 
-Write-Host "Auditing Domain Admin membership..."
+Write-Host "Auditing Domain Admin membership..." -ForegroundColor Yellow
 
 
 
-Import-Module ActiveDirectory
+try {
 
+    Import-Module ActiveDirectory -ErrorAction Stop
 
+    Get-ADGroupMember "Domain Admins" | Select-Object Name, SamAccountName, ObjectClass
 
-Get-ADGroupMember "Domain Admins"
+}
 
+catch {
 
+    Write-Warning "Could not load ActiveDirectory module or query Domain Admins."
+
+}
 
 
 
 # ------------------------------------------------
 
-# 7. Disable Print Spooler (Prevents PrintNightmare)
+# 7. Disable Print Spooler
+
+# Prevents PrintNightmare-style abuse
 
 # ------------------------------------------------
 
-Write-Host "Disabling Print Spooler..."
+Write-Host "Disabling Print Spooler..." -ForegroundColor Yellow
 
 
 
-Stop-Service Spooler -Force
+try {
 
-Set-Service Spooler -StartupType Disabled
+    Stop-Service Spooler -Force -ErrorAction SilentlyContinue
 
+    Set-Service Spooler -StartupType Disabled -ErrorAction SilentlyContinue
 
+}
+
+catch {
+
+    Write-Warning "Could not fully disable Print Spooler."
+
+}
 
 
 
@@ -170,43 +178,73 @@ Set-Service Spooler -StartupType Disabled
 
 # ------------------------------------------------
 
-Write-Host "Hardening DNS..."
+Write-Host "Hardening DNS..." -ForegroundColor Yellow
 
 
 
-Set-DnsServerRecursion -Enable $false
+try {
+
+    Set-DnsServerRecursion -Enable $false -ErrorAction Stop
+
+}
+
+catch {
+
+    Write-Warning "Could not disable DNS recursion."
+
+}
 
 
 
-Set-DnsServerCache -LockingPercent 100
+try {
+
+    Set-DnsServerCache -LockingPercent 100 -ErrorAction Stop
+
+}
+
+catch {
+
+    Write-Warning "Could not set DNS cache locking."
+
+}
 
 
 
-Set-DnsServerResponseRateLimiting `
+try {
 
- -ResponsesPerSec 5 `
+    Set-DnsServerResponseRateLimiting `
 
- -ErrorsPerSec 5 `
+     -ResponsesPerSec 5 `
 
- -WindowInSec 5 `
+     -ErrorsPerSec 5 `
 
- -Enable $true
+     -WindowInSec 5 `
 
+     -Enable $true `
 
+     -ErrorAction Stop
+
+}
+
+catch {
+
+    Write-Warning "Could not configure DNS Response Rate Limiting."
+
+}
 
 
 
 # ------------------------------------------------
 
-# 9. Disable NTLM v1
+# 9. Disable NTLMv1
 
 # ------------------------------------------------
 
-Write-Host "Disabling NTLMv1..."
+Write-Host "Disabling NTLMv1..." -ForegroundColor Yellow
 
 
 
-New-ItemProperty `
+Set-ItemProperty `
 
  -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Lsa" `
 
@@ -214,19 +252,31 @@ New-ItemProperty `
 
  -Value 5 `
 
- -PropertyType DWORD -Force
-
-
+ -Type DWord
 
 
 
 # ------------------------------------------------
 
-# 10. Force Kerberos Only
+# 10. Force Kerberos stronger encryption
 
 # ------------------------------------------------
 
-Write-Host "Hardening Kerberos..."
+Write-Host "Hardening Kerberos..." -ForegroundColor Yellow
+
+
+
+if (-not (Test-Path "HKLM:\SYSTEM\CurrentControlSet\Control\Lsa\Kerberos\Parameters")) {
+
+    New-Item `
+
+     -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Lsa\Kerberos" `
+
+     -Name "Parameters" `
+
+     -Force | Out-Null
+
+}
 
 
 
@@ -238,10 +288,8 @@ Set-ItemProperty `
 
  -Value 2147483640 `
 
- -Type DWORD
+ -Type DWord
 
 
 
-
-
-Write-Host "Domain Controller Hardening Complete."
+Write-Host "Domain Controller Hardening Complete." -ForegroundColor Green
