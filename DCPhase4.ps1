@@ -1,201 +1,97 @@
-Write-Host "Starting Domain Controller Firewall Lockdown..."
+Write-Host "Starting Domain Controller Firewall Lockdown..." -ForegroundColor Cyan
 
 
 
-# Enable firewall
+# Enable firewall on all profiles
 
 Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled True
 
 
 
-# Remove weak rules
+# Optional: set a stricter default posture
 
-Get-NetFirewallRule | Where {$_.Enabled -eq "True"} | Disable-NetFirewallRule
+Set-NetFirewallProfile -Profile Domain,Public,Private `
+
+    -DefaultInboundAction Block `
+
+    -DefaultOutboundAction Allow
 
 
 
 # ----------------------------------------
 
-# Required Active Directory Ports
+# Required Active Directory / DNS / DC Ports
 
 # ----------------------------------------
 
 
 
-# DNS
+$rules = @(
 
-New-NetFirewallRule -DisplayName "DNS TCP" `
+    @{ Name="DNS TCP";                Protocol="TCP"; Port=53   },
 
-Direction Inbound `
+    @{ Name="DNS UDP";                Protocol="UDP"; Port=53   },
 
-Protocol TCP `
+    @{ Name="Kerberos TCP";           Protocol="TCP"; Port=88   },
 
-LocalPort 53 `
+    @{ Name="Kerberos UDP";           Protocol="UDP"; Port=88   },
 
-Action Allow
+    @{ Name="LDAP TCP";               Protocol="TCP"; Port=389  },
 
+    @{ Name="LDAP UDP";               Protocol="UDP"; Port=389  },
 
+    @{ Name="LDAPS";                  Protocol="TCP"; Port=636  },
 
-New-NetFirewallRule -DisplayName "DNS UDP" `
+    @{ Name="Global Catalog";         Protocol="TCP"; Port=3268 },
 
-Direction Inbound `
+    @{ Name="Global Catalog SSL";     Protocol="TCP"; Port=3269 },
 
-Protocol UDP `
+    @{ Name="SMB";                    Protocol="TCP"; Port=445  },
 
-LocalPort 53 `
+    @{ Name="RPC Endpoint Mapper";    Protocol="TCP"; Port=135  },
 
-Action Allow
+    @{ Name="NTP";                    Protocol="UDP"; Port=123  }
 
+)
 
 
 
+foreach ($rule in $rules) {
 
-# Kerberos
+    $existing = Get-NetFirewallRule -DisplayName $rule.Name -ErrorAction SilentlyContinue
 
-New-NetFirewallRule -DisplayName "Kerberos TCP" `
 
-Direction Inbound `
 
-Protocol TCP `
+    if ($existing) {
 
-LocalPort 88 `
+        Write-Host "Rule already exists: $($rule.Name)" -ForegroundColor Yellow
 
-Action Allow
+        Set-NetFirewallRule -DisplayName $rule.Name -Enabled True -Action Allow -Direction Inbound
 
+    }
 
+    else {
 
-New-NetFirewallRule -DisplayName "Kerberos UDP" `
+        New-NetFirewallRule `
 
-Direction Inbound `
+            -DisplayName $rule.Name `
 
-Protocol UDP `
+            -Direction Inbound `
 
-LocalPort 88 `
+            -Protocol $rule.Protocol `
 
-Action Allow
+            -LocalPort $rule.Port `
 
+            -Action Allow `
 
+            -Profile Domain
 
+        Write-Host "Created rule: $($rule.Name)" -ForegroundColor Green
 
+    }
 
-# LDAP
+}
 
-New-NetFirewallRule -DisplayName "LDAP TCP" `
 
-Direction Inbound `
 
-Protocol TCP `
-
-LocalPort 389 `
-
-Action Allow
-
-
-
-New-NetFirewallRule -DisplayName "LDAP UDP" `
-
-Direction Inbound `
-
-Protocol UDP `
-
-LocalPort 389 `
-
-Action Allow
-
-
-
-
-
-# LDAPS
-
-New-NetFirewallRule -DisplayName "LDAPS" `
-
-Direction Inbound `
-
-Protocol TCP `
-
-LocalPort 636 `
-
-Action Allow
-
-
-
-
-
-# Global Catalog
-
-New-NetFirewallRule -DisplayName "Global Catalog" `
-
-Direction Inbound `
-
-Protocol TCP `
-
-LocalPort 3268 `
-
-Action Allow
-
-
-
-New-NetFirewallRule -DisplayName "Global Catalog SSL" `
-
-Direction Inbound `
-
-Protocol TCP `
-
-LocalPort 3269 `
-
-Action Allow
-
-
-
-
-
-# SMB / SYSVOL / Netlogon
-
-New-NetFirewallRule -DisplayName "SMB" `
-
-Direction Inbound `
-
-Protocol TCP `
-
-LocalPort 445 `
-
-Action Allow
-
-
-
-
-
-# RPC Endpoint Mapper
-
-New-NetFirewallRule -DisplayName "RPC Endpoint Mapper" `
-
-Direction Inbound `
-
-Protocol TCP `
-
-LocalPort 135 `
-
-Action Allow
-
-
-
-
-
-# NTP
-
-New-NetFirewallRule -DisplayName "NTP" `
-
-Direction Inbound `
-
-Protocol UDP `
-
-LocalPort 123 `
-
-Action Allow
-
-
-
-
-
-Write-Host "Firewall Lockdown Complete."
+Write-Host "Firewall Lockdown Complete." -ForegroundColor Green
