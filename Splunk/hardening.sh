@@ -1,4 +1,4 @@
-#!/bin/bash
+F#!/bin/bash
 # ==============================================================================
 # Comprehensive OS Hardening, Detection, & Remediation Script
 # (Oracle Linux / RHEL-family Adaptation)
@@ -448,19 +448,19 @@ log_success "rsyslog UDP/TCP listeners enabled."
 FIREWALL_RSYSLOG="/etc/rsyslog.d/firewall.conf"
 
 cat << 'EOF' > "$FIREWALL_RSYSLOG"
-if $fromhost-ip == '172.16.102.254' then /var/log/firewall.log
+if $fromhost-ip == '172.16.101.254' then /var/log/syslog
 & stop
 
-if $fromhost-ip == '172.20.242.150' then /var/log/firewall.log
+if $fromhost-ip == '172.16.102.254' then /var/log/syslog
 & stop
 EOF
 
-touch /var/log/firewall.log
-chmod 640 /var/log/firewall.log
+# touch /var/log/firewall.log
+# chmod 640 /var/log/firewall.log
 
 systemctl restart rsyslog
 
-log_success "Firewall log capture configured."
+log_success "Firewall log capture configured to /var/log/syslog."
 
 # ------------------------------------------------------------------------------
 # Configure Splunk to ingest firewall logs
