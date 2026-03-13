@@ -445,15 +445,15 @@ log_success "rsyslog UDP/TCP listeners enabled."
 # Firewall log file configuration
 # ------------------------------------------------------------------------------
 
-FIREWALL_RSYSLOG="/etc/rsyslog.d/firewall.conf"
+# FIREWALL_RSYSLOG="/etc/rsyslog.d/firewall.conf"
 
-cat << 'EOF' > "$FIREWALL_RSYSLOG"
-if $fromhost-ip == '172.16.101.254' then /var/log/syslog
-& stop
+# cat << 'EOF' > "$FIREWALL_RSYSLOG"
+# if $fromhost-ip == '172.16.101.254' then /var/log/syslog
+# & stop
 
-if $fromhost-ip == '172.16.102.254' then /var/log/syslog
-& stop
-EOF
+# if $fromhost-ip == '172.16.102.254' then /var/log/syslog
+# & stop
+# EOF
 
 # touch /var/log/firewall.log
 # chmod 640 /var/log/firewall.log
