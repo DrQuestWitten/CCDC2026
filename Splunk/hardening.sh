@@ -91,7 +91,7 @@ else
 fi
 
 # 1.2 System Binaries
-BAD_BINS=$(find /bin /sbin /usr/bin /usr/sbin\ \( -type f -o -type d \) \( ! -user root -o ! -perm 0755 \) 2>/dev/null)
+BAD_BINS=$(find /bin /sbin /usr/bin /usr/sbin \( -type f -o -type d \) \( ! -user root -o ! -perm 0755 \) 2>/dev/null)
 if [[ -n "$BAD_BINS" ]]; then
     log_found "Anomalous permissions/ownership in system binaries detected."
     chown -R root:root /bin /sbin /usr/bin /usr/sbin
@@ -136,7 +136,7 @@ log_info "--- Section 4: Surface Reduction ---"
 SERVICES_TO_REMOVE=("avahi-daemon" "cups" "fwupd-refresh.timer" "rpcbind" "bluetooth"
                     "sysstat-collect.timer" "sysstat-summary.timer" "ipc_broker"
                     "identity" "postgres" "rpc.idmapd" "rpc.statd" "dnf-automatic.timer"
-                    "abrtd" "abrt-ccpp" "abrt-oops" "kdump" "cups-browsed" "chronyd" "pcscd"
+                    "abrtd" "abrt-ccpp" "abrt-oops" "kdump" "cups-browsed" "pcscd"
                     "ModemManager" "NetworkManager-wait-online" "geoclue" "vsftpd" "telnet"
                     "tftp" "nfs-server" "smb" "snmpd")
 
@@ -266,7 +266,7 @@ HIGH_FD_FOUND=0
 
 find /proc -maxdepth 1 -type d -name "[0-9]*" | while read -r pid_dir; do
     fd_count=$(ls -1 "$pid_dir/fd" 2>/dev/null | wc -l)
-    if [ "$fd_count" -gt 20 ]; then
+    if [ "$fd_count" -gt 500 ]; then
         cmd=$(cat "$pid_dir/cmdline" 2>/dev/null | tr '\0' ' ')
         pid=${pid_dir##*/}
         log_found "PID $pid has $fd_count open files. Command: $cmd"
@@ -486,6 +486,16 @@ log_success "Splunk configured to monitor firewall logs."
 # ==============================================================================
 log_info "--- Section 7: Host-Based Firewall (firewalld) ---"
 
+# Flush raw iptables rules
+log_info "Flushing raw iptables rules..."
+iptables -F >/dev/null 2>&1 || true
+iptables -X >/dev/null 2>&1 || true
+iptables -t nat -F >/dev/null 2>&1 || true
+iptables -t mangle -F >/dev/null 2>&1 || true
+ip6tables -F >/dev/null 2>&1 || true
+ip6tables -X >/dev/null 2>&1 || true
+log_fixed "Rap iptables and ip6tables rules flushed"
+
 # Ensure firewalld is installed
 if ! rpm -q firewalld >/dev/null 2>&1; then
     log_found "firewalld not installed — installing."
@@ -521,6 +531,9 @@ for svc in dhcpv6-client cockpit; do
     fi
 done
 
+firewall-cmd --zone-=public --remove-service=cockpit --permanent >/dev/null 2>&1 || 
+firewall-cmd --zone-=public --remove-service=dhcpv6-client --permanent >/dev/null 2>&1 || true
+
 # Set default zone to public
 firewall-cmd --set-default-zone=public >/dev/null 2>&1
 
@@ -546,8 +559,10 @@ firewall-cmd --zone=public --set-target=DROP --permanent >/dev/null 2>&1
 # Allow only essential ports
 firewall-cmd --zone=public --add-port=22/tcp --permanent   # SSH
 firewall-cmd --zone=public --add-port=8000/tcp --permanent # Splunk Web
+firewall-cmd --zone=public --add-port=8089/tcp --permanent # Splunk Management
 firewall-cmd --zone=public --add-port=9997/tcp --permanent # Splunk Forwarder
 firewall-cmd --zone=public --add-port=514/udp --permanent # syslog
+firewall-cmd --zone=public --add-port=514/tcp --permanent # syslog
 firewall-cmd --zone=public --add-port=1514/tcp --permanent # Wazuh
 firewall-cmd --zone=public --add-port=1515/tcp --permanent # Wazuh
 
@@ -582,9 +597,21 @@ log_fixed "firewalld configured: default DROP, only SSH/8000/9997 allowed, trust
 # 8. Splunk Configuration Hardening
 # ==============================================================================
 
-log_info "--- Section 9: Splunk Hardening ---"
+log_info "--- Section 8: Splunk Hardening ---"
 
 mkdir -p "$SPLUNK_DIR"
+
+log_info "Auditing Splunk saved searches for system() calls..."
+MALICIOUS_SEARCHES=$(grep -rE "system\(" \
+    /opt/splunk/etc/apps/*/local/savedsearches.conf \
+    /opt/splunk/etc/system/local/savedsearches.conf 2>/dev/null)
+if [[ -n "$MALICIOUS_SEARCHES" ]]; then
+    log_found "system() call detected in Splunk saved searches - likely red team activity"
+    echo "$MALICIOUS_SEARCHES" | tee -a "$AUDIT_REPORT"
+    log_info "Review and remove malicious stanzas from the relevant savedsearches."
+else
+    log_success "No system() calls detected in Splunk saved searches."
+fi
 
 # web.conf hardening
 # ------------------------------------------------------------------------------
@@ -757,6 +784,54 @@ fi
 # ==============================================================================
 log_info "--- Section 10: Filesystem Hunting ---"
 
+# Check /etc/hosts for poisoning
+log_info "Checking /etc/hosts for poisoning..."
+SUSPICIOUS_HOSTS=$(grep -v "^#" /etc/hosts | grep -vE "^(127\.|::1|localhost)" | grep "127\.0\.0\.1")
+if [[ -n "$SUSPICIOUS_HOSTS" ]]; then
+    log_found "/etc/hosts may be poisoned - suspicious loopback entries detected:"
+    echo "$SUSPICIOUS_HOSTS" | tee -a "$AUDIT_REPORT"
+else
+    log_success "/etc/hosts looks clean."
+fi
+
+# Check for immutable files in common red team locations
+log_info "Checking for immutable files in common persistence locations..."
+IMMUTABLE_FILES=$(lsattr /etc/cron.d/* /usr/local/bin/* /etc/sudoers.d/* 2>/dev/null | grep "\-i-")
+if [[ -n "$IMMUTABLE_FILES" ]]; then
+    log_found "Immutable files detected - red team may have used chattr +i to protect malicious files:"
+    echo "$IMMUTABLE_FILES" | tee -a "$AUDIT_REPORT"
+    log_info "To remove immutable flag: sudo chattr -i <filename>"
+else
+    log_success "No immutable files detected in common persistence locations."
+fi
+
+#Check /etc/security/limits.conf for resource limits on key users
+log_info "Checking /etc/security/limits.conf for malicious resource limits..."
+SUSPICIOUS_LIMITS=$(grep -E "splunk.*(nproc|nofile)" /etc/security/limits.conf 2>/dev/null)
+if [[ -n "$SUSPICIOUS_LIMITS" ]]; then
+    log_found "Suspicious resource limits detected on splunk user, may cause DoS:"
+    echo "$SUSPICIOUS_LIMITS" | tee -a "$AUDIT_REPORT"
+    log_info "Remove the suspicious entries from /etc/security/limits.conf to fix."
+else
+    log_success "/etc/security/limits.conf looks clean"
+fi
+
+#Check for malicious logrotate configs
+log_info "Auditing /etc/logrotate.d/ for unpackaged configs..."
+ROGUE_LOGROTATE=""
+for f in /etc/logrotate.d/*; do
+    if ! rpm -qf "$f" >/dev/null 2>&1; then
+        ROGUE_LOGROTATE="$ROGUE_LOGROTATE\n$f"
+    fi
+done
+if [[ -n "$ROGUE_LOGROTATE" ]]; then
+    log_found "Unpackaged logrotate configs detected - may be red team artifacts:"
+    echo -e "$ROGUE_LOGROTATE" | tee -a "$AUDIT_REPORT"
+    log_info "Review and remove any suspicious configs"
+else
+    log_success "All logrotate configs are owned by installed packages."
+fi
+
 # 10.1 Check temporary directories for hidden executables
 log_info "Looking for executables in /tmp, /dev/shm, /var/tmp..."
 for tmpdir in /tmp /dev/shm /var/tmp; do
@@ -861,11 +936,11 @@ log_info "--- Section 14: Shell Profiles & Environment ---"
 # 14.1 Audit .bashrc, .profile, .bash_login for backdoors
 log_info "Scanning user shell profiles for injected commands..."
 SHELL_BACKDOORS=0
-for shellrc in /root/.bashrc /root/.bash_profile /home/*/.bashrc /home/*/.bash_profile; do
+for shellrc in /root/.bashrc /root/.bash_profile /home/*/.bashrc /home/*/.bash_profile /opt/splunk.bashrc /opt/splunk/.bash_profile; do
     if [[ -f "$shellrc" ]]; then
-        if grep -qE 'curl|wget|nc -l|bash -i|/dev/tcp|eval|exec' "$shellrc"; then
+        if grep -qE 'curl|wget|nc -l|bash -i|/dev/tcp|eval|exec|alias.*/|alias.*\\.' "$shellrc"; then
             log_found "Suspicious content in $shellrc"
-            grep -E 'curl|wget|nc -l|bash -i|/dev/tcp|eval|exec' "$shellrc" >> "$AUDIT_REPORT"
+            grep -E 'curl|wget|nc -l|bash -i|/dev/tcp|eval|exec|alias.*/|alias.*\\.' "$shellrc" >> "$AUDIT_REPORT"
             SHELL_BACKDOORS=$((SHELL_BACKDOORS + 1))
         fi
     fi
