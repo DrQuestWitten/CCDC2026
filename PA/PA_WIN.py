@@ -84,32 +84,32 @@ set profiles dos-protection CCDC_Protection type aggregate flood other-ip enable
 set profiles dos-protection CCDC_Protection type aggregate flood icmpv6 enable yes
 set profiles dos-protection CCDC_Protection type aggregate flood tcp-syn enable yes
 
-set rulebase dos rules DOS-DNS from {untrusted_zone}
-set rulebase dos rules DOS-DNS to {trusted_zone}
+set rulebase dos rules DOS-DNS from zone {untrusted_zone}
+set rulebase dos rules DOS-DNS to zone {trusted_zone}
 set rulebase dos rules DOS-DNS source any
 set rulebase dos rules DOS-DNS destination DNS_PUBLIC
 set rulebase dos rules DOS-DNS service DNS_udp
 set rulebase dos rules DOS-DNS action protect
 set rulebase dos rules DOS-DNS protection aggregate profile CCDC_Protection
 
-set rulebase dos rules DOS-IIS from {untrusted_zone}
-set rulebase dos rules DOS-IIS to {trusted_zone}
+set rulebase dos rules DOS-IIS from zone {untrusted_zone}
+set rulebase dos rules DOS-IIS to zone {trusted_zone}
 set rulebase dos rules DOS-IIS source any
 set rulebase dos rules DOS-IIS destination IIS_PUBLIC
 set rulebase dos rules DOS-IIS service IIS_service
 set rulebase dos rules DOS-IIS action protect
 set rulebase dos rules DOS-IIS protection aggregate profile CCDC_Protection
 
-set rulebase dos rules DOS-FTP from {untrusted_zone}
-set rulebase dos rules DOS-FTP to {trusted_zone}
+set rulebase dos rules DOS-FTP from zone {untrusted_zone}
+set rulebase dos rules DOS-FTP to zone {trusted_zone}
 set rulebase dos rules DOS-FTP source any
 set rulebase dos rules DOS-FTP destination FTP_PUBLIC
 set rulebase dos rules DOS-FTP service FTP_service
 set rulebase dos rules DOS-FTP action protect
 set rulebase dos rules DOS-FTP protection aggregate profile CCDC_Protection
 
-set rulebase dos rules ProtectDefault from any
-set rulebase dos rules ProtectDefault to any
+set rulebase dos rules ProtectDefault from zone {untrusted_zone}
+set rulebase dos rules ProtectDefault to zone {trusted_zone}
 set rulebase dos rules ProtectDefault source any
 set rulebase dos rules ProtectDefault destination any
 set rulebase dos rules ProtectDefault service any
