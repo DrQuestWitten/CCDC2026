@@ -91,13 +91,15 @@ Mehdi Mirnajafi - Network Lead
 
 Michael Abood - Tech Lead / Networking
 
-Keegan Miller - Oracle Splunk
+Keegan Miller - Oracle Splunk / Fedora Webmail
 
-Abdul Shakib - Server 22 FTP
+Abdul Shakib - Server 19 Web
 
-Adam Mayberry - Server 19 Web
+Adam Mayberry - Orange Team Correspondence
 
-Drabir Sen - Windows 11 Workstation
+Sebastian Newberry - Server 22 FTP
+
+Drabir Sen - Windows Substitute
 
 ## Advisors - 2026
 Professor Doug Witten
