@@ -1,4 +1,4 @@
-F#!/bin/bash
+#!/bin/bash
 # ==============================================================================
 # Comprehensive OS Hardening, Detection, & Remediation Script
 # (Oracle Linux / RHEL-family Adaptation)
@@ -531,8 +531,8 @@ for svc in dhcpv6-client cockpit; do
     fi
 done
 
-firewall-cmd --zone-=public --remove-service=cockpit --permanent >/dev/null 2>&1 || 
-firewall-cmd --zone-=public --remove-service=dhcpv6-client --permanent >/dev/null 2>&1 || true
+firewall-cmd --zone=public --remove-service=cockpit --permanent >/dev/null 2>&1 || 
+firewall-cmd --zone=public --remove-service=dhcpv6-client --permanent >/dev/null 2>&1 || true
 
 # Set default zone to public
 firewall-cmd --set-default-zone=public >/dev/null 2>&1
@@ -936,7 +936,7 @@ log_info "--- Section 14: Shell Profiles & Environment ---"
 # 14.1 Audit .bashrc, .profile, .bash_login for backdoors
 log_info "Scanning user shell profiles for injected commands..."
 SHELL_BACKDOORS=0
-for shellrc in /root/.bashrc /root/.bash_profile /home/*/.bashrc /home/*/.bash_profile /opt/splunk.bashrc /opt/splunk/.bash_profile; do
+for shellrc in /root/.bashrc /root/.bash_profile /home/*/.bashrc /home/*/.bash_profile /opt/splunk/.bashrc /opt/splunk/.bash_profile; do
     if [[ -f "$shellrc" ]]; then
         if grep -qE 'curl|wget|nc -l|bash -i|/dev/tcp|eval|exec|alias.*/|alias.*\\.' "$shellrc"; then
             log_found "Suspicious content in $shellrc"
