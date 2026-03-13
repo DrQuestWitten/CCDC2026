@@ -114,7 +114,7 @@ set rulebase dos rules ProtectDefault source any
 set rulebase dos rules ProtectDefault destination any
 set rulebase dos rules ProtectDefault service any
 set rulebase dos rules ProtectDefault action protect
-set rulebase dos rules ProtectDefault protection aggregate profile default
+set rulebase dos rules ProtectDefault protection aggregate profile CCDC_Protection
 
 commit
 set mgt-config users admin password
