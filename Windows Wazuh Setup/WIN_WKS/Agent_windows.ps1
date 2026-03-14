@@ -1,5 +1,6 @@
 #powershell.exe -ExecutionPolicy Bypass .\Agent_windows.ps1
 # 1. Configuration
+#powershell -ExecutionPolicy Bypass -File .\your_script.ps1
 $ManagerIP = "172.20.242.20"
 $AgentName = "WKS_WIN11" 
 #$AgentName = "wsk" 
