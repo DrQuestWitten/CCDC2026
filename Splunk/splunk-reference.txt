@@ -1,0 +1,234 @@
+================================================================================
+MWCCDC COMPETITION REFERENCE - SPLUNK/ORACLE LINUX MACHINE
+================================================================================
+
+================================================================================
+SECTION 1: IMPORTANT DIRECTORIES & FILES TO CHECK
+================================================================================
+
+--- SPLUNK CONFIGURATION ---
+/opt/splunk/etc/system/local/inputs.conf        - Log monitors (check for "disabled = true")
+/opt/splunk/etc/system/local/outputs.conf       - Forwarding config (check for unauthorized destinations)
+/opt/splunk/etc/system/local/web.conf           - Web UI settings
+/opt/splunk/etc/system/local/server.conf        - TLS and server settings
+/opt/splunk/etc/system/local/authentication.conf - Password policy, lockout settings
+/opt/splunk/etc/apps/*/local/savedsearches.conf - Saved searches (check for system() calls)
+/opt/splunk/etc/passwd                          - Splunk user accounts
+/opt/splunk/etc/users/                          - Splunk user directory
+/opt/splunk/var/log/splunk/                     - Splunk logs
+
+--- CRON JOBS ---
+/etc/crontab                                    - System crontab
+/etc/cron.d/                                    - Drop-in cron jobs (check for dot/hidden files with ls -la)
+/etc/cron.hourly/                               - Hourly cron jobs
+/etc/cron.daily/                                - Daily cron jobs
+/etc/cron.weekly/                               - Weekly cron jobs
+/etc/cron.monthly/                              - Monthly cron jobs
+/var/spool/cron/                                - Per-user crontabs (check EVERY user, not just root)
+
+--- USER & ACCESS CONTROL ---
+/etc/passwd                                     - User accounts (check for unexpected shell users)
+/etc/shadow                                     - Password hashes
+/etc/sudoers                                    - Sudo rules
+/etc/sudoers.d/                                 - Drop-in sudo rules (CHECK FOR HIDDEN DOT FILES: ls -la)
+/home/*/.ssh/authorized_keys                    - SSH keys for regular users
+/root/.ssh/authorized_keys                      - SSH keys for root
+/home/*/.bashrc                                 - User shell profiles
+/home/*/.bash_profile                           - User shell profiles
+/root/.bashrc                                   - Root shell profile
+/root/.bash_profile                             - Root shell profile
+/opt/splunk/.bashrc                             - Splunk user shell profile
+/opt/splunk/.bash_profile                       - Splunk user shell profile
+
+--- SYSTEM PERSISTENCE ---
+/etc/systemd/system/                            - Installed systemd services (check for dot files & recent timestamps)
+/usr/local/bin/                                 - Non-packaged binaries (check for dot/hidden files)
+/etc/init.d/                                    - Legacy init scripts
+/tmp/                                           - Temp directory (should have NO executables)
+/dev/shm/                                       - Shared memory (should have NO executables)
+/var/tmp/                                       - Temp directory (should have NO executables)
+
+--- SYSTEM CONFIGURATION ---
+/etc/hosts                                      - DNS override (check for loopback poisoning of legit domains)
+/etc/security/limits.conf                       - Resource limits (check for splunk user restrictions)
+/etc/ssh/sshd_config                            - SSH hardening settings
+/etc/audit/rules.d/                             - Auditd rules (check for "never,exit" execve suppression)
+/etc/logrotate.d/                               - Log rotation configs (verify each with: rpm -qf <file>)
+/etc/modprobe.d/                                - Kernel module config
+/etc/ld.so.preload                              - LD_PRELOAD hooks (should be EMPTY or ABSENT)
+/etc/pam.d/                                     - PAM authentication modules
+
+--- LOG FILES ---
+/var/log/secure                                 - Authentication events
+/var/log/messages                               - General syslog
+/var/log/audit/audit.log                        - Auditd events
+/var/log/cron                                   - Cron execution log
+/var/log/wtmp                                   - Login history (read with: last)
+/var/log/btmp                                   - Failed login history (read with: lastb)
+/var/log/boot.log                               - Boot events
+/var/log/firewalld                              - Firewall events
+
+
+================================================================================
+SECTION 2: MOST USEFUL COMPETITION COMMANDS
+================================================================================
+
+--- USER & ACCESS AUDITING ---
+
+# All users with shell access
+grep -vE "(/sbin/nologin|/bin/false)" /etc/passwd
+
+# Check for rogue UID 0 accounts (should only be root)
+awk -F: '$3 == 0 {print $1}' /etc/passwd
+
+# Who is currently logged in
+who
+w
+
+# Recent login history
+last | head -20
+lastb | head -20
+
+# Check sudoers including hidden files
+sudo visudo -c
+sudo ls -la /etc/sudoers.d/
+
+# Check wheel group members
+getent group wheel
+
+# Check SSH authorized keys for all users
+sudo find /home -name "authorized_keys" -exec cat {} \;
+sudo cat /root/.ssh/authorized_keys
+
+--- FILE SYSTEM & PERSISTENCE HUNTING ---
+
+# Check for immutable files (red team uses chattr +i to protect malicious files)
+lsattr /etc/cron.d/* /usr/local/bin/* /etc/sudoers.d/*
+
+# Remove immutable flag before deleting
+sudo chattr -i <filename>
+
+# Find SUID/SGID binaries (compare against known good)
+find /bin /sbin /usr/bin /usr/sbin /usr/local/bin -perm /4000 -o -perm /2000 2>/dev/null
+
+# Find executables in temp directories (always suspicious)
+find /tmp /dev/shm /var/tmp -type f -executable 2>/dev/null
+
+# Check if a file is owned by a legitimate package
+rpm -qf /path/to/file
+
+# Find files modified recently (last 24 hours)
+find /etc /usr/local/bin /var/spool/cron -mtime -1 2>/dev/null
+
+# Check ALL user crontabs
+for user in $(cut -f1 -d: /etc/passwd); do echo "==$user=="; crontab -u $user -l 2>/dev/null; done
+
+--- NETWORK & FIREWALL ---
+
+# All listening ports with process names
+ss -tulpn
+
+# Established connections
+ss -tupn | grep ESTAB
+
+# Check firewalld rules
+sudo firewall-cmd --list-all
+
+# Check raw iptables rules (red team bypass method - check this separately from firewalld)
+sudo iptables -L -n -v
+
+# Flush raw iptables if red team tampered
+sudo iptables -F
+
+--- PROCESS & SERVICE AUDITING ---
+
+# All running services
+systemctl list-units --type=service --state=running
+
+# Check a specific service
+systemctl status <service>
+
+# Check for processes running from temp directories
+lsof 2>/dev/null | grep -E '/tmp/|/dev/shm/' | grep REG
+
+# Check for unlinked executables running in memory
+lsof +L1 2>/dev/null | grep DEL
+
+# Kill a process by PID
+sudo kill -9 <PID>
+
+--- SPLUNK SPECIFIC ---
+
+# Splunk status
+sudo /opt/splunk/bin/splunk status
+
+# List Splunk users
+sudo /opt/splunk/bin/splunk list user
+
+# Add Splunk user
+sudo /opt/splunk/bin/splunk add user <name> -password <pass> -role admin
+
+# Remove Splunk user
+sudo /opt/splunk/bin/splunk remove user <name>
+
+# Restart Splunk
+sudo systemctl restart Splunkd
+
+# Check Splunk inputs
+sudo cat /opt/splunk/etc/system/local/inputs.conf
+
+# Check saved searches for system() calls
+sudo grep -rE "system\(" /opt/splunk/etc/apps/*/local/savedsearches.conf
+
+--- LOG & AUDIT INTEGRITY ---
+
+# Check log file sizes (empty logs after incident = red team cleared them)
+ls -lh /var/log/secure /var/log/messages /var/log/audit/audit.log
+
+# Check auditd rules
+sudo auditctl -l
+
+# Reload auditd rules after changes
+sudo augenrules --load
+
+# Check disk usage (watch for disk filler attacks)
+df -h
+
+# Check for junk files from disk filler attacks
+ls -lh /tmp/.cache-* /opt/splunk/var/log/.tmp-* 2>/dev/null
+
+--- SYSTEM HEALTH ---
+
+# Check /etc/hosts for poisoning (loopback entries for legitimate domains)
+cat /etc/hosts
+
+# Check resource limits on splunk user
+grep splunk /etc/security/limits.conf
+
+# Check logrotate configs - anything not owned by a package is suspicious
+for f in /etc/logrotate.d/*; do rpm -qf $f 2>/dev/null || echo "UNPACKAGED: $f"; done
+
+# Check SELinux status (should be enforcing)
+sestatus
+
+# Check loaded kernel modules
+lsmod | head -20
+
+
+================================================================================
+SECTION 3: RED TEAM ATTACK QUICK REFERENCE
+================================================================================
+(What to look for if something seems wrong)
+
+Splunk keeps dying          -> Check cron jobs, systemd services for kill scripts
+Can't delete a file         -> Run: lsattr <file> | check for 'i' flag, then chattr -i
+Disk filling up             -> Check /tmp/.cache-* and /opt/splunk/var/log/.tmp-*
+yum update fails            -> Check /etc/hosts for poisoned entries
+Splunk ports unreachable    -> Check iptables -L -n -v (separate from firewalld)
+Splunk not collecting logs  -> Check inputs.conf for "disabled = true"
+Auditd not logging commands -> Check: sudo auditctl -l | grep "never,exit"
+Unknown root access vector  -> Check /etc/sudoers.d/ with ls -la (look for dot files)
+Splunk web acting strange   -> Check savedsearches.conf for system() calls
+SSH backdoor                -> Check all authorized_keys files and /etc/passwd for new users
+Performance degraded        -> Check /etc/security/limits.conf for splunk restrictions
+================================================================================

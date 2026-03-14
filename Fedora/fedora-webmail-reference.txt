@@ -1,0 +1,390 @@
+================================================================================
+MWCCDC COMPETITION REFERENCE - FEDORA WEBMAIL MACHINE (DOVECOT/SMTP/POP3)
+================================================================================
+
+================================================================================
+SECTION 1: FEDORA vs ORACLE LINUX DIFFERENCES
+================================================================================
+
+--- PACKAGE MANAGER ---
+Oracle Linux:   dnf / yum (same commands)
+Fedora:         dnf only
+Note:           Commands are identical, just dnf on Fedora
+
+--- LOG FILE LOCATIONS ---
+Oracle Linux:   /var/log/secure          (auth events)
+Fedora:         /var/log/auth.log        (auth events - may vary by version)
+                /var/log/secure          (also present on some Fedora versions)
+Both:           Use journalctl as primary log tool on Fedora (systemd-native)
+
+# Check auth events on Fedora:
+sudo journalctl -u sshd --since "1 hour ago"
+sudo journalctl -u dovecot --since "1 hour ago"
+sudo journalctl -u postfix --since "1 hour ago"
+
+--- FIREWALL ---
+Oracle Linux:   firewalld (default)
+Fedora:         firewalld (default) - same commands apply
+Note:           Same firewall-cmd syntax, no differences
+
+--- SELINUX ---
+Both run SELinux enforcing by default
+Fedora may have slightly different policy versions but commands are identical
+sestatus
+sudo setenforce 1
+sudo nano /etc/selinux/config   # Set SELINUX=enforcing
+
+--- PACKAGE VERIFICATION ---
+Both use:   rpm -qf <file>      # Check if file is owned by a package
+Both use:   rpm -Va             # Verify all installed packages
+
+--- SERVICE MANAGEMENT ---
+Identical on both - systemctl commands are the same
+
+--- KEY FEDORA-SPECIFIC NOTES ---
+- Fedora releases are faster/newer than Oracle Linux - packages may be newer versions
+- Config file locations for services are identical to RHEL/Oracle
+- /var/log/messages exists on Fedora but journalctl is preferred
+- Fedora may not have /var/log/secure - use journalctl for auth logs if missing
+
+
+================================================================================
+SECTION 2: IMPORTANT DIRECTORIES & FILES TO CHECK
+================================================================================
+
+--- DOVECOT CONFIGURATION ---
+/etc/dovecot/dovecot.conf                   - Main Dovecot config file
+/etc/dovecot/conf.d/                        - Modular config directory (most settings here)
+/etc/dovecot/conf.d/10-auth.conf            - Authentication settings
+/etc/dovecot/conf.d/10-mail.conf            - Mailbox location settings
+/etc/dovecot/conf.d/10-master.conf          - Service listener settings (ports/sockets)
+/etc/dovecot/conf.d/10-ssl.conf             - SSL/TLS settings
+/etc/dovecot/conf.d/10-logging.conf         - Logging settings
+/etc/dovecot/conf.d/15-lda.conf             - Local delivery agent settings
+/etc/dovecot/conf.d/20-pop3.conf            - POP3 specific settings
+/etc/dovecot/conf.d/20-imap.conf            - IMAP specific settings (if enabled)
+/etc/dovecot/conf.d/90-acl.conf             - Access control lists
+/etc/dovecot/conf.d/90-quota.conf           - Mailbox quota settings
+/etc/dovecot/passwd                         - Dovecot passwd-file auth (if used)
+/etc/dovecot/users                          - Dovecot user file (if used)
+
+--- POSTFIX (SMTP) CONFIGURATION ---
+/etc/postfix/main.cf                        - Main Postfix config (most important)
+/etc/postfix/master.cf                      - Service process config (ports/listeners)
+/etc/postfix/virtual                        - Virtual mailbox/alias mappings
+/etc/postfix/aliases                        - Mail aliases
+/etc/postfix/access                         - Access control (block/allow)
+/etc/postfix/transport                      - Mail routing rules
+/etc/postfix/sasl_passwd                    - SASL auth credentials (check for tampering)
+/var/spool/postfix/                         - Postfix mail spool directory
+
+--- WEBMAIL APPLICATION ---
+/var/www/html/                              - Default Apache web root (check for webshells)
+/etc/httpd/conf/httpd.conf                  - Apache main config (if using Apache)
+/etc/httpd/conf.d/                          - Apache drop-in configs
+/etc/nginx/nginx.conf                       - Nginx main config (if using Nginx)
+/etc/nginx/conf.d/                          - Nginx drop-in configs
+/var/www/html/roundcube/config/             - Roundcube config (if using Roundcube)
+/var/www/html/squirrelmail/config/          - SquirrelMail config (if using SquirrelMail)
+
+--- MAIL STORAGE ---
+/var/mail/                                  - System mailbox location (mbox format)
+/var/spool/mail/                            - Alternative mailbox location
+/home/*/Maildir/                            - Maildir format per user (if configured)
+/var/vmail/                                 - Virtual mailbox location (common for Dovecot)
+
+--- SSL/TLS CERTIFICATES ---
+/etc/pki/tls/certs/                         - Certificate files (.crt)
+/etc/pki/tls/private/                       - Private key files (.key) - should be root-only
+/etc/letsencrypt/live/                      - Let's Encrypt certs (if used)
+Note: Check certificate expiry and that private keys haven't been replaced
+
+--- LOG FILES ---
+/var/log/maillog                            - Main mail log (Postfix + Dovecot on Fedora/RHEL)
+/var/log/dovecot.log                        - Dovecot specific log (if separately configured)
+/var/log/dovecot-info.log                   - Dovecot info log
+/var/log/httpd/access_log                   - Apache access log (webmail)
+/var/log/httpd/error_log                    - Apache error log (webmail)
+/var/log/nginx/access.log                   - Nginx access log (if using Nginx)
+/var/log/nginx/error.log                    - Nginx error log
+/var/log/secure                             - SSH auth events
+/var/log/audit/audit.log                    - Auditd events
+
+--- CRON JOBS (same as Oracle) ---
+/etc/crontab
+/etc/cron.d/                                - Check for hidden dot files with ls -la
+/var/spool/cron/                            - Per-user crontabs (check ALL users)
+
+--- USER & ACCESS CONTROL (same as Oracle) ---
+/etc/passwd                                 - Check for unexpected mail service accounts
+/etc/sudoers
+/etc/sudoers.d/                             - Check for hidden dot files with ls -la
+/home/*/.ssh/authorized_keys
+/root/.ssh/authorized_keys
+
+--- SYSTEM PERSISTENCE (same as Oracle) ---
+/etc/systemd/system/                        - Check for malicious services
+/usr/local/bin/                             - Check for hidden dot files
+/tmp/, /dev/shm/, /var/tmp/                 - Should have no executables
+
+--- SYSTEM CONFIGURATION (same as Oracle) ---
+/etc/hosts                                  - Check for loopback poisoning
+/etc/security/limits.conf                   - Check for resource limits on mail users
+/etc/audit/rules.d/                         - Check for execve suppression
+/etc/logrotate.d/                           - Verify with rpm -qf
+
+
+================================================================================
+SECTION 3: MOST USEFUL COMMANDS - WEBMAIL/MAIL SERVER SPECIFIC
+================================================================================
+
+--- DOVECOT STATUS & MANAGEMENT ---
+
+# Check Dovecot status
+sudo systemctl status dovecot
+
+# Restart Dovecot
+sudo systemctl restart dovecot
+
+# Check Dovecot config for errors
+sudo doveconf -n                            # Shows all non-default settings
+sudo doveconf -a                            # Shows ALL settings including defaults
+sudo dovecot -n                             # Alternative syntax
+
+# Check Dovecot active listeners (should be 110 POP3, 995 POP3S, 143 IMAP, 993 IMAPS)
+sudo doveadm service list
+
+# List active Dovecot connections
+sudo doveadm who
+
+# List all Dovecot mail users
+sudo doveadm user '*'
+
+# Check Dovecot auth attempts
+sudo doveadm log find
+
+# Check Dovecot SSL config
+sudo doveconf -n | grep ssl
+
+# Reload Dovecot config without restart
+sudo doveadm reload
+
+--- POSTFIX STATUS & MANAGEMENT ---
+
+# Check Postfix status
+sudo systemctl status postfix
+
+# Restart Postfix
+sudo systemctl restart postfix
+
+# Check Postfix config for errors
+sudo postfix check
+
+# Show active Postfix config values
+sudo postconf -n                            # Non-default values only
+sudo postconf                               # All values
+
+# Check mail queue
+sudo postqueue -p                           # List queued messages
+sudo postqueue -f                           # Flush/retry queued messages
+sudo postsuper -d ALL                       # Delete ALL queued messages (use carefully)
+sudo postsuper -d <queue-id>               # Delete specific queued message
+
+# Check Postfix listening ports (should be 25 SMTP, 587 submission, 465 SMTPS)
+ss -tulpn | grep master
+
+# Test SMTP connection locally
+telnet localhost 25
+# Then type: EHLO test
+
+--- MAIL LOG ANALYSIS ---
+
+# Watch mail log in real time
+sudo tail -f /var/log/maillog
+
+# Check for failed auth attempts
+sudo grep "authentication failed" /var/log/maillog | tail -20
+
+# Check for successful logins
+sudo grep "Login:" /var/log/maillog | tail -20
+
+# Check for suspicious relaying
+sudo grep "relay=" /var/log/maillog | tail -20
+
+# Check for rejected mail
+sudo grep "reject:" /var/log/maillog | tail -20
+
+# Use journalctl for Dovecot logs
+sudo journalctl -u dovecot -n 50
+sudo journalctl -u postfix -n 50
+
+--- SSL/TLS CERTIFICATE CHECKS ---
+
+# Check certificate expiry
+sudo openssl x509 -in /etc/pki/tls/certs/dovecot.crt -noout -dates
+sudo openssl x509 -in /etc/pki/tls/certs/postfix.crt -noout -dates
+
+# Check private key permissions (should be 600, root only)
+ls -la /etc/pki/tls/private/
+
+# Verify certificate matches private key
+sudo openssl x509 -noout -modulus -in /etc/pki/tls/certs/dovecot.crt | md5sum
+sudo openssl rsa -noout -modulus -in /etc/pki/tls/private/dovecot.key | md5sum
+# Both md5sums must match
+
+# Test SSL connection to Dovecot POP3S
+openssl s_client -connect localhost:995
+
+# Test SSL connection to Postfix SMTPS
+openssl s_client -connect localhost:465
+
+--- WEBMAIL APPLICATION ---
+
+# Check webmail for PHP webshells
+sudo grep -rl "system\|shell_exec\|exec\|passthru\|eval" /var/www/html/ 2>/dev/null
+
+# Check Apache status
+sudo systemctl status httpd
+
+# Check Nginx status
+sudo systemctl status nginx
+
+# Check for unauthorized files in web root
+ls -lat /var/www/html/ | head -20         # Sort by modification time - recent files suspicious
+
+# Check Apache/Nginx config for suspicious rewrites or proxying
+sudo grep -r "RewriteRule\|ProxyPass" /etc/httpd/conf.d/ 2>/dev/null
+sudo grep -r "proxy_pass" /etc/nginx/conf.d/ 2>/dev/null
+
+--- MAIL USER MANAGEMENT ---
+
+# List all system users who can receive mail
+cat /etc/passwd | grep -v nologin | grep -v false
+
+# Check mailbox sizes (watch for unusual activity)
+sudo du -sh /var/mail/* 2>/dev/null
+sudo du -sh /home/*/Maildir/ 2>/dev/null
+
+# Check POP3/IMAP sessions
+sudo doveadm who
+
+--- NETWORK & PORT CHECKS ---
+
+# Verify only expected mail ports are open
+ss -tulpn
+# Expected ports:
+#   22   - SSH
+#   25   - SMTP
+#   80   - HTTP (webmail)
+#   110  - POP3
+#   143  - IMAP (if enabled)
+#   443  - HTTPS (webmail)
+#   465  - SMTPS
+#   587  - SMTP submission
+#   993  - IMAPS (if enabled)
+#   995  - POP3S
+
+# Check raw iptables (red team bypass)
+sudo iptables -L -n -v
+
+# Check firewalld rules
+sudo firewall-cmd --list-all
+
+
+================================================================================
+SECTION 4: WEBMAIL-SPECIFIC RED TEAM ATTACK QUICK REFERENCE
+================================================================================
+
+Mail service down               -> Check: systemctl status dovecot postfix
+                                   Check: journalctl -u dovecot -n 50
+                                   Check: /var/log/maillog
+
+Can't send/receive mail         -> Check postfix queue: postqueue -p
+                                   Check: postconf -n | grep relay
+                                   Check: /etc/postfix/main.cf for relay tampering
+
+Unauthorized mail relay         -> Check: grep "relay=" /var/log/maillog
+                                   Check: postconf -n | grep mynetworks
+                                   Lock down: mynetworks = 127.0.0.0/8
+
+SSL cert replaced/expired       -> Check: openssl x509 -in <cert> -noout -dates
+                                   Verify key matches cert (md5sum method above)
+
+Webshell planted                -> Check: grep -rl "system\|shell_exec" /var/www/html/
+                                   Check: ls -lat /var/www/html/ for recent files
+
+Mail users compromised          -> Check: grep "Login:" /var/log/maillog
+                                   Check: doveadm who (active sessions)
+                                   Change passwords immediately
+
+Dovecot auth bypassed           -> Check: /etc/dovecot/conf.d/10-auth.conf
+                                   Look for: disable_plaintext_auth = no (bad)
+                                   Look for: auth_mechanisms changes
+
+Postfix open relay              -> Test: telnet localhost 25
+                                   Then: RCPT TO: <external@email.com>
+                                   Should be REJECTED for non-local domains
+
+Config files tampered           -> Check: rpm -Va | grep -E "postfix|dovecot"
+                                   Restore from: dnf reinstall postfix dovecot
+
+Splunk killer / disk filler     -> Same as Oracle machine:
+                                   Check cron jobs, systemd services
+                                   Check: df -h
+                                   Check: ls /tmp/.cache-*
+
+Ports blocked                   -> Check raw iptables: sudo iptables -L -n -v
+                                   Flush if tampered: sudo iptables -F
+
+================================================================================
+SECTION 5: DOVECOT HARDENING QUICK REFERENCE
+================================================================================
+
+# Disable plaintext auth (force SSL)
+# In /etc/dovecot/conf.d/10-auth.conf:
+disable_plaintext_auth = yes
+auth_mechanisms = plain login
+
+# Force SSL on all connections
+# In /etc/dovecot/conf.d/10-ssl.conf:
+ssl = required
+ssl_min_protocol = TLSv1.2
+
+# Restrict valid users (prevent unknown user enumeration)
+# In /etc/dovecot/conf.d/10-auth.conf:
+auth_verbose = no
+auth_verbose_passwords = no
+
+# Set login attempt limits
+# In /etc/dovecot/conf.d/10-master.conf:
+service imap-login {
+  process_limit = 100
+}
+
+# Check who is currently logged into Dovecot
+sudo doveadm who
+
+# Kick a specific connected user
+sudo doveadm kick <username>
+
+================================================================================
+SECTION 6: POSTFIX HARDENING QUICK REFERENCE
+================================================================================
+
+# Key settings to verify in /etc/postfix/main.cf:
+smtpd_banner = $myhostname ESMTP          # Don't reveal version info
+disable_vrfy_command = yes                 # Prevent user enumeration
+smtpd_helo_required = yes                  # Require HELO/EHLO
+mynetworks = 127.0.0.0/8                   # Only allow local relay
+smtpd_relay_restrictions = permit_mynetworks, reject_unauth_destination
+
+# Reload Postfix after config changes
+sudo postfix reload
+
+# Check if Postfix is acting as open relay (should reject this)
+telnet localhost 25
+EHLO test
+MAIL FROM: test@test.com
+RCPT TO: external@gmail.com               # Should get 554 REJECTED
+
+================================================================================
