@@ -51,7 +51,7 @@ set address WIN11_PRIVATE ip-netmask 172.20.240.100
 set address WIN11_PUBLIC ip-netmask 172.25.31.144
 
 set service IIS_service protocol tcp port 80,443
-set service DNS_udp protocol udp port 53
+set service DNS_udp protocol udp port 53,123
 set service FTP_service protocol tcp port 21,50000-50100
 set service TFTP_service protocol udp port 69
 
