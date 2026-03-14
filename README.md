@@ -14,39 +14,22 @@ The goal of this repository is to centralize:
 
 This allows team members to quickly deploy defenses, investigate incidents, and maintain system availability during competitions.
 
----
+## Script Documentation
 
-## Security Scripts
+### Linux
+For Linux hardening scripts, install the correct script to your system and run:
 
-The `scripts` directory may contain tools used to automate defensive tasks.
+- sudo chmod +x <script>.sh
+- ./<script>.sh
 
-Always review scripts before running them on production systems.
 
----
+Linux Wazuh Scripts:
 
-## System Hardening
+To deploy the Wazuh agent on each linux machine, adjust the WAZUH_MANAGER IP address in both the ossec.conf, and agent.sh files. It is also required to ensure that the Agent Name section in both is identical and human-readable. Select the correct Wazuh scripts for your respective machine.
+- Wazuh Agent requires ports 1514 and 1515 to be open on your machine
 
-The `hardening` folder contains guides and doomsday lists for securing systems.
+### Windows
 
-### Linux Hardening
-
-Typical hardening steps include:
-
-* Disable root SSH login
-* Enforce password policies
-* Configure firewall rules
-* Remove unnecessary services
-* Secure file permissions
-
-### Windows Hardening
-
-Typical hardening steps include:
-
-* Disable guest accounts
-* Enable Windows Defender
-* Harden RDP settings
-* Apply security group policies
-* Remove unused services
 
 ---
 
