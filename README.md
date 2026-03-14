@@ -55,6 +55,8 @@ Team members are encouraged to contribute by:
 
 ## Disclaimer
 
+Incident Response Sample and Scoring Rubric (Found in Templates) provided by user @RedefiningReality from the CCDC Discord - Credit and thanks to them.
+
 These tools and resources are intended **only for defensive cybersecurity use in authorized environments**, including:
 
 * CCDC competitions
