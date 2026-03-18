@@ -39,16 +39,16 @@ set deviceconfig system login-banner "UNAUTHORIZED ACCESS TO THIS DEVICE IS PROH
 set deviceconfig system timezone US/Central
 
 set address DNS_PRIVATE ip-netmask 172.20.240.102
-set address DNS_PUBLIC ip-netmask 172.25.31.155
+set address DNS_PUBLIC ip-netmask 172.25.29.155
 
 set address IIS_PRIVATE ip-netmask 172.20.240.101
-set address IIS_PUBLIC ip-netmask 172.25.31.140
+set address IIS_PUBLIC ip-netmask 172.25.29.140
 
 set address FTP_PRIVATE ip-netmask 172.20.240.104
-set address FTP_PUBLIC ip-netmask 172.25.31.162
+set address FTP_PUBLIC ip-netmask 172.25.29.162
 
 set address WIN11_PRIVATE ip-netmask 172.20.240.100
-set address WIN11_PUBLIC ip-netmask 172.25.31.144
+set address WIN11_PUBLIC ip-netmask 172.25.29.144
 
 set service IIS_service protocol tcp port 80,443
 set service DNS_udp protocol udp port 53,123
@@ -66,7 +66,7 @@ set rulebase security rules Allow-Outbound action allow from {trusted_zone} to {
 set rulebase security rules Allow-Outbound application any service [ General_Ports_TCP General_Ports_UDP ]
 
 set rulebase security rules Allow-Inbound-FTP action allow from {untrusted_zone} to {trusted_zone} source any destination FTP_PUBLIC
-set rulebase security rules Allow-Inbound-FTP application any service FTP_service
+set rulebase security rules Allow-Inbound-FTP application any service [ FTP_service TFTP_service ]
 
 set rulebase security rules Allow-Inbound-IIS action allow from {untrusted_zone} to {trusted_zone} source any destination IIS_PUBLIC
 set rulebase security rules Allow-Inbound-IIS application any service IIS_service
