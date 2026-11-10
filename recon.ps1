@@ -1,4 +1,3 @@
-================= RECON.PS1 =================
 # This script ONLY looks. It changes nothing. Safe to run anytime.
 # It saves everything it finds to a file on your Desktop too.
 
